@@ -1,0 +1,111 @@
+services:
+  mariadb:
+    image: mariadb
+    container_name: mariadb_1
+    build:
+      context: ./requirements/mariadb/.
+      dockerfile: mariadb.dockerfile
+    pull_policy: build
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - mariadb:/var/lib/mysql
+    environment:
+      - DATA_BASE
+      - DB_USER
+      - DB_PASSWORD
+    secrets:
+      - db_password
+    networks:
+      - inception
+    restart: always
+
+
+  wordpress:
+    image: wordpress
+    container_name: wordpress_1
+    build:
+      context: ./requirements/wordpress/.
+      dockerfile: wordpress.dockerfile
+    pull_policy: build
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/9000'"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    volumes:
+      - wordpress:/var/www/wordpress
+    environment:
+      - DOMAIN_NAME
+      - WP_ADMIN_USER
+      - WP_ADMIN_PASSWORD
+      - WP_ADMIN_EMAIL
+      - WP_REGULAR_USER
+      - WP_REGULAR_PASSWORD
+      - WP_REGULAR_EMAIL
+      - DATA_BASE
+      - DB_USER
+      - DB_PASSWORD
+    secrets:
+      - wp_admin_password
+      - wp_regular_password
+      - db_password
+    networks:
+      - inception
+    restart: always
+
+
+  nginx:
+    image: nginx
+    container_name: nginx_1
+    build:
+      context: ./requirements/nginx/.
+      dockerfile: nginx.dockerfile
+    pull_policy: build
+    depends_on:
+      wordpress:
+        condition: service_healthy
+    networks:
+      - inception
+    ports:
+      - "443:443"
+    volumes:
+      - wordpress:/var/www/wordpress
+    restart: always
+
+volumes:
+  mariadb:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/mlabrirh/data/mariadb
+  wordpress:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/mlabrirh/data/wordpress
+
+
+networks:
+  inception:
+    driver: bridge
+
+
+secrets:
+  db_password:
+    environment: DB_PASSWORD
+  wp_admin_password:
+    environment: WP_ADMIN_PASSWORD
+  wp_regular_password:
+    environment: WP_REGULAR_PASSWORD
+
+
