@@ -1,95 +1,46 @@
 services:
   mariadb:
-    image: mariadb:inception
     container_name: mariadb
-    build:
-      context: ./requirements/mariadb
-      dockerfile: Dockerfile
+    build: ./requirements/mariadb
     restart: always
-    environment:
-      DATA_BASE: ${DATA_BASE}
-      DB_USER: ${DB_USER}
-    secrets:
-      - db_password
-      - db_root_password
-    volumes:
-      - mariadb_data:/var/lib/mysql
-    networks:
-      - inception
-    healthcheck:
-      test: ["CMD-SHELL", "mariadb-admin ping -h localhost || exit 1"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+    env_file: .env
+    secrets: [ db_password, db_root_password ]
+    volumes: [ mariadb_data:/var/lib/mysql ]
+    networks: [ inception ]
 
   wordpress:
-    image: wordpress:inception
     container_name: wordpress
-    build:
-      context: ./requirements/wordpress
-      dockerfile: Dockerfile
+    build: ./requirements/wordpress
     restart: always
-    environment:
-      DOMAIN_NAME: ${DOMAIN_NAME}
-      DATA_BASE: ${DATA_BASE}
-      DB_USER: ${DB_USER}
-      WP_ADMIN_USER: ${WP_ADMIN_USER}
-      WP_ADMIN_EMAIL: ${WP_ADMIN_EMAIL}
-      WP_REGULAR_USER: ${WP_REGULAR_USER}
-      WP_REGULAR_EMAIL: ${WP_REGULAR_EMAIL}
-    secrets:
-      - db_password
-      - wp_admin_password
-      - wp_regular_password
-    volumes:
-      - wordpress_data:/var/www/wordpress
-    networks:
-      - inception
-    depends_on:
-      mariadb:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/9000' || exit 1"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
+    env_file: .env
+    secrets: [ db_password, wp_admin_password, wp_regular_password ]
+    volumes: [ wordpress_data:/var/www/wordpress ]
+    networks: [ inception ]
+    depends_on: [ mariadb ]
 
   nginx:
-    image: nginx:inception
     container_name: nginx
-    build:
-      context: ./requirements/nginx
-      dockerfile: Dockerfile
+    build: ./requirements/nginx
     restart: always
-    ports:
-      - "443:443"
-    volumes:
-      - wordpress_data:/var/www/wordpress:ro
-    networks:
-      - inception
-    depends_on:
-      wordpress:
-        condition: service_healthy
+    ports: [ "443:443" ]
+    volumes: [ wordpress_data:/var/www/wordpress ]
+    networks: [ inception ]
+    depends_on: [ wordpress ]
 
 volumes:
   mariadb_data:
-    driver: local
     driver_opts:
       type: none
       o: bind
-      device: ${DATA_PATH:-/home/mlabrirh/data}/mariadb
+      device: /home/mlabrirh/data/mariadb
   wordpress_data:
-    driver: local
     driver_opts:
       type: none
       o: bind
-      device: ${DATA_PATH:-/home/mlabrirh/data}/wordpress
+      device: /home/mlabrirh/data/wordpress
 
 networks:
   inception:
-    name: inception
     driver: bridge
 
 secrets:
