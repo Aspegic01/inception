@@ -1,65 +1,63 @@
-*This project has been created as part of the 42 curriculum by Mouad Labrirhil.*
+# Inception - 42 Project
 
-# Inception
+An automated, secure multi-container web infrastructure built from scratch using custom Dockerfiles, Docker Compose, and Debian.
 
-## Description
-This project focuses on system administration and infrastructure architecture by requiring the deployment of a multi-service web environment using Docker and Docker Compose. The goal is to build an isolated, containerized infrastructure from scratch using custom Dockerfiles rather than relying on pre-built, ready-to-use images from Docker Hub. The architecture orchestrates Nginx (TLS terminating reverse proxy), WordPress (via PHP-FPM), and MariaDB, communicating over an internal Docker bridge network.
+## Architecture
 
-## Project Description
+* **Nginx**: Dedicated container acting as TLS terminating reverse proxy (port 443 only, TLSv1.2 & TLSv1.3).
+* **WordPress + PHP-FPM**: Dedicated container executing PHP-FPM listening on port 9000. Includes WP-CLI for automated initialization.
+* **MariaDB**: Dedicated container running MariaDB listening on port 3306 on the private bridge network.
 
-### Architecture & Design Choices
-This project utilizes Docker to enforce process isolation. The infrastructure relies on three primary services, each running in a dedicated container, enforcing a strict one-process-per-container model (PID 1). 
+```
+      Host Browser (https://mlabrirh.42.fr:443)
+                      │
+                      ▼
+               ┌───────────────┐
+               │  nginx:443    │ (TLS termination)
+               └───────┬───────┘
+                       │ FastCGI (port 9000)
+                       ▼
+               ┌───────────────┐
+               │ wordpress:9000│
+               └───────┬───────┘
+                       │ MariaDB TCP (port 3306)
+                       ▼
+               ┌───────────────┐
+               │ mariadb:3306  │
+               └───────────────┘
+```
 
-The source code includes custom `Dockerfile` configurations for each service, initialization bash scripts to bootstrap the databases and web configurations, and a `docker-compose.yml` file to orchestrate the network rules and volume bindings. 
+## Setup Instructions
 
-Key design choices include:
-*   **TLS Configuration:** Nginx is strictly configured to accept only TLSv1.2 and TLSv1.3 traffic on port 443, utilizing self-signed X.509 certificates generated non-interactively via OpenSSL.
-*   **Process Management:** PHP-FPM is configured with a `dynamic` process manager to optimize physical RAM usage by spawning worker processes specifically in response to TCP traffic bursts.
-*   **Data Persistence:** Host bind mounts are mapped to `/home/mlabrirh/data/` to ensure database and website files survive container teardowns.
+1. Add domain routing to `/etc/hosts`:
+   ```bash
+   127.0.0.1 mlabrirh.42.fr
+   ```
 
-### Technical Comparisons
+2. Create host storage directories:
+   ```bash
+   mkdir -p /home/mlabrirh/data/mariadb /home/mlabrirh/data/wordpress
+   ```
 
-#### Virtual Machines vs Docker
-*   **Virtual Machines:** Rely on hardware-level virtualization driven by a Hypervisor. A VM allocates virtualized hardware (CPU, RAM, Disks) and boots a complete, independent guest Operating System kernel. This introduces heavy memory overhead and high boot latency.
-*   **Docker:** Relies on OS-level virtualization. Containers do not boot their own kernel; they share the host machine's Linux kernel. Process isolation is achieved purely through kernel namespaces (isolating mount points, network interfaces, and process IDs) and cgroups (restricting resource consumption).
+3. Launch the infrastructure:
+   ```bash
+   make
+   ```
 
-#### Secrets vs Environment Variables
-*   **Secrets (Docker Swarm):** Cryptographic payloads or passwords that are securely mounted into the container's memory using a `tmpfs` filesystem (typically at `/run/secrets/`). They are never written to physical disk and are strictly isolated from the standard process environment block.
-*   **Environment Variables:** Key-value pairs injected directly into the container's environment block during the `exec` phase. They are easily accessible via the `env` command and can leak if an application dumps its state, making them less secure for sensitive credentials in production environments.
+## Makefile Commands
 
-#### Docker Network vs Host Network
-*   **Docker Network (Bridge):** Instructs the kernel to instantiate a virtual switch (`bridge` interface) and uses `veth` pairs to connect isolated container network namespaces to it. The host applies `iptables` NAT routing to handle outbound traffic. It provides a secure, private subnet with built-in DNS resolution for inter-container communication.
-*   **Host Network:** Bypasses Docker's virtual network isolation entirely. The container shares the host system's exact network namespace. If a container binds to port 80, it binds directly to the host's physical network interface card, preventing any other process on the host from using that port.
+* `make` / `make all` - Builds images and launches containers in detached mode.
+* `make down` - Stops and removes containers and network.
+* `make clean` - Stops containers and removes Docker volumes.
+* `make fclean` - Complete teardown: removes containers, networks, images, and clears host data directories.
+* `make re` - Rebuilds the entire infrastructure from scratch (`fclean` + `all`).
+* `make logs` - Shows unified container output logs.
+* `make ps` - Displays the status and health of all containers.
 
-#### Docker Volumes vs Bind Mounts
-*   **Docker Volumes:** Storage managed entirely by the Docker daemon (typically located in `/var/lib/docker/volumes/`). Docker controls the metadata, permissions, and lifecycle of the data independent of the host filesystem structure.
-*   **Bind Mounts:** A direct mount namespace binding from a specific, explicitly defined path on the host filesystem (e.g., `/home/mlabrirh/data`) directly into the container. The data lifecycle is detached from Docker, and host POSIX file permissions strictly apply to the reading and writing of data.
+## Credentials & Users
 
-## Instructions
-
-The project is orchestrated entirely via a `Makefile`. Ensure Docker and Docker Compose are installed on your host machine before proceeding. 
-
-*Note: Before starting the environment, you must map the local domain by adding the following line to your `/etc/hosts` file:*
-`127.0.0.1 mlabrirh.42.fr`
-
-### Makefile Execution Rules
-
-*   **`make`** or **`make all`** (Compilation & Execution)
-    Initializes the required host volume directories (`/home/mlabrirh/data/...`), builds the custom Docker images from the provided Dockerfiles, and starts the containers in the background (`-d`).
-
-*   **`make down`**
-    Stops the running containers and removes the virtual bridge network. The physical host data and built images are preserved.
-
-*   **`make clean`**
-    Stops the containers, removes the network, and drops the internal Docker volume metadata bindings (`docker compose down -v`).
-
-*   **`make fclean`**
-    Performs a complete infrastructure teardown. It stops all services, removes the project's specific Docker images (`--rmi all`), and executes `rm -rf` to forcefully delete the persistent database and WordPress files from the physical host machine.
-
-*   **`make re`**
-    Executes a complete reset by running `fclean` followed immediately by `all`.
-
-## Resources
-
-*   [YouTube Playlist: <INSERT PLAYLIST NAME>](<INSERT LINK>) — Utilized as a primary visual walkthrough for structuring the Docker Compose environment, writing the Dockerfiles, and orchestrating the initial service configurations.
-*   [Docker Documentation: Network and Storage drivers](https://docs.docker.com/)
+* **WordPress URL**: `https://mlabrirh.42.fr`
+* **Admin Login URL**: `https://mlabrirh.42.fr/wp-admin`
+* **Admin Username**: `wp_master` (Non-admin naming compliant with 42 evaluation rules)
+* **Regular Username**: `mlabrirh_user`
+* **Secrets**: Managed securely via files in the `secrets/` directory (`db_password`, `db_root_password`, `wp_admin_password`, `wp_regular_password`).

@@ -1,4 +1,0 @@
-.env
-srcs/.env
-secrets/*
-!secrets/.gitkeep

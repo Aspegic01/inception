@@ -1,51 +1,70 @@
 #!/bin/bash
+set -e
 
-WP_ADMIN_PASSWORD="${WP_ADMIN_PASSWORD:-$(cat /run/secrets/wp_admin_password 2>/dev/null || true)}"
-WP_REGULAR_PASSWORD="${WP_REGULAR_PASSWORD:-$(cat /run/secrets/wp_regular_password 2>/dev/null || true)}"
-DB_PASSWORD="${DB_PASSWORD:-$(cat /run/secrets/db_password 2>/dev/null || true)}"
+# Read passwords from Docker secrets if available
+if [ -f /run/secrets/db_password ]; then
+    DB_PASSWORD=$(cat /run/secrets/db_password)
+fi
+if [ -f /run/secrets/wp_admin_password ]; then
+    WP_ADMIN_PASSWORD=$(cat /run/secrets/wp_admin_password)
+fi
+if [ -f /run/secrets/wp_regular_password ]; then
+    WP_REGULAR_PASSWORD=$(cat /run/secrets/wp_regular_password)
+fi
 
+mkdir -p /var/www/wordpress /run/php
 cd /var/www/wordpress
 
-#download the wp-cli
-if [ ! -f "/usr/local/bin/wp" ]; then
-    curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
-    chmod +x wp-cli.phar
-    mv wp-cli.phar /usr/local/bin/wp
-fi
-
-#block execution until the MariaDB socket is fully accepting TCP connections
-until mariadb -h mariadb_1 -u ${DB_USER} -p${DB_PASSWORD} -e "SELECT 1;" > /dev/null 2>&1; do
-    echo "waiting for MariaDB to initialize and open port 3306..."
+# Wait for MariaDB service to accept connections
+echo "Waiting for MariaDB service at mariadb:3306..."
+until mariadb-admin ping -h mariadb -u "${DB_USER}" -p"${DB_PASSWORD}" --silent 2>/dev/null; do
     sleep 2
 done
+echo "Connected to MariaDB successfully."
 
-#check for config file
+# Install and configure WordPress if not already configured
 if [ ! -f "wp-config.php" ]; then
+    echo "Downloading WordPress core..."
     wp core download --allow-root
+
+    echo "Configuring wp-config.php..."
     wp config create \
-        --dbname=${DATA_BASE} \
-        --dbuser=${DB_USER} \
-        --dbpass=${DB_PASSWORD} \
-        --dbhost=mariadb_1 \
+        --dbname="${DATA_BASE}" \
+        --dbuser="${DB_USER}" \
+        --dbpass="${DB_PASSWORD}" \
+        --dbhost="mariadb:3306" \
         --allow-root
 
+    echo "Installing WordPress core site..."
     wp core install \
-        --url=https://${DOMAIN_NAME} \
+        --url="https://${DOMAIN_NAME}" \
         --title="Inception" \
-        --admin_user=${WP_ADMIN_USER} \
-        --admin_password=${WP_ADMIN_PASSWORD} \
-        --admin_email=${WP_ADMIN_EMAIL} \
+        --admin_user="${WP_ADMIN_USER}" \
+        --admin_password="${WP_ADMIN_PASSWORD}" \
+        --admin_email="${WP_ADMIN_EMAIL}" \
+        --skip-email \
         --allow-root
 
+    echo "Creating regular user '${WP_REGULAR_USER}'..."
     wp user create \
-        ${WP_REGULAR_USER} \
-        ${WP_REGULAR_EMAIL} \
+        "${WP_REGULAR_USER}" \
+        "${WP_REGULAR_EMAIL}" \
         --role=author \
-        --user_pass=${WP_REGULAR_PASSWORD} \
+        --user_pass="${WP_REGULAR_PASSWORD}" \
         --allow-root
+
+    echo "WordPress installation and configuration completed."
+else
+    echo "wp-config.php found. Synchronizing database configuration..."
+    wp config set DB_NAME "${DATA_BASE}" --allow-root
+    wp config set DB_USER "${DB_USER}" --allow-root
+    wp config set DB_PASSWORD "${DB_PASSWORD}" --allow-root
+    wp config set DB_HOST "mariadb:3306" --allow-root
 fi
 
-#ensure correct permissions for nginx to read the populated files
+# Ensure proper permissions for web server and php-fpm
 chown -R www-data:www-data /var/www/wordpress
 
-exec php-fpm8.4 -F
+echo "Starting PHP-FPM as PID 1..."
+PHP_FPM_BIN=$(which php-fpm8.2 || which php-fpm8.4 || which php-fpm)
+exec ${PHP_FPM_BIN} -F
