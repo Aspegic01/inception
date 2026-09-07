@@ -15,10 +15,34 @@ done
 
 # Install WordPress if not already present
 if [ ! -f "wp-config.php" ]; then
+
     wp core download --allow-root
-    wp config create --dbname="$DATA_BASE" --dbuser="$DB_USER" --dbpass="$DB_PASSWORD" --dbhost="mariadb:3306" --allow-root
-    wp core install --url="https://$DOMAIN_NAME" --title="Inception" --admin_user="$WP_ADMIN_USER" --admin_password="$WP_ADMIN_PASSWORD" --admin_email="$WP_ADMIN_EMAIL" --skip-email --allow-root
-    wp user create "$WP_REGULAR_USER" "$WP_REGULAR_EMAIL" --role=author --user_pass="$WP_REGULAR_PASSWORD" --allow-root
+
+    wp config create \
+     --dbname="$DATA_BASE" \
+     --dbuser="$DB_USER" \
+     --dbpass="$DB_PASSWORD" \
+     --dbhost="mariadb:3306" \
+     --allow-root
+
+
+    wp core install \
+    --url="https://$DOMAIN_NAME" \
+    --title="Inception" \
+    --admin_user="$WP_ADMIN_USER" \
+    --admin_password="$WP_ADMIN_PASSWORD" \
+    --admin_email="$WP_ADMIN_EMAIL" \
+    --skip-email \
+    --allow-root
+
+
+    wp user create \
+    "$WP_REGULAR_USER" \
+    "$WP_REGULAR_EMAIL" \
+    --role=author \
+    --user_pass="$WP_REGULAR_PASSWORD" \
+    --allow-root
+
 fi
 
 # Set proper web root permissions and start PHP-FPM as PID 1

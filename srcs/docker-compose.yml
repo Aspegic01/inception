@@ -4,7 +4,7 @@ services:
     build: ./requirements/mariadb
     restart: always
     env_file: .env
-    secrets: [ db_password, db_root_password ]
+    secrets: [ db_password ]
     volumes: [ mariadb_data:/var/lib/mysql ]
     networks: [ inception ]
 
@@ -22,7 +22,7 @@ services:
     container_name: nginx
     build: ./requirements/nginx
     restart: always
-    ports: [ "443:443" ]
+    ports: [ "8443:443" ]
     volumes: [ wordpress_data:/var/www/wordpress ]
     networks: [ inception ]
     depends_on: [ wordpress ]
@@ -46,8 +46,6 @@ networks:
 secrets:
   db_password:
     file: ../secrets/db_password
-  db_root_password:
-    file: ../secrets/db_root_password
   wp_admin_password:
     file: ../secrets/wp_admin_password
   wp_regular_password:

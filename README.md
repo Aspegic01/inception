@@ -60,4 +60,4 @@ An automated, secure multi-container web infrastructure built from scratch using
 * **Admin Login URL**: `https://mlabrirh.42.fr/wp-admin`
 * **Admin Username**: `wp_master` (Non-admin naming compliant with 42 evaluation rules)
 * **Regular Username**: `mlabrirh_user`
-* **Secrets**: Managed securely via files in the `secrets/` directory (`db_password`, `db_root_password`, `wp_admin_password`, `wp_regular_password`).
+* **Secrets**: Managed securely via files in the `secrets/` directory (`db_password`, `wp_admin_password`, `wp_regular_password`).
