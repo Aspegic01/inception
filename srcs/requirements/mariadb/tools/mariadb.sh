@@ -10,7 +10,7 @@ chown -R mysql:mysql /run/mysqld /var/lib/mysql
 # 3. Setup database and user
 
 if [ ! -d "/var/lib/mysql/mysql" ]; then
-    mariadb-install-db --user=mysql --datadir=/var/lib/mysql > /dev/null
+    mariadb-install-db --user=mysql --datadir=/var/lib/mysql
 fi
 # 4. Start mariadb in the background
 if [ ! -d "/var/lib/mysql/$DATA_BASE" ]; then

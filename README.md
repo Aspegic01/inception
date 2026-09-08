@@ -1,63 +1,100 @@
-# Inception - 42 Project
+*This project has been created as part of the 42 curriculum by Mouad labrirhil.*
 
-An automated, secure multi-container web infrastructure built from scratch using custom Dockerfiles, Docker Compose, and Debian.
+# Inception
 
-## Architecture
+## Description
 
-* **Nginx**: Dedicated container acting as TLS terminating reverse proxy (port 443 only, TLSv1.2 & TLSv1.3).
-* **WordPress + PHP-FPM**: Dedicated container executing PHP-FPM listening on port 9000. Includes WP-CLI for automated initialization.
-* **MariaDB**: Dedicated container running MariaDB listening on port 3306 on the private bridge network.
+This project focuses on system administration and infrastructure architecture. It deploys a multi-service WordPress environment using Docker and Docker Compose.
 
+The infrastructure is built from custom Dockerfiles instead of ready-to-use application images. Nginx, WordPress with PHP-FPM, and MariaDB run in separate containers and communicate through a private Docker bridge network.
+
+## Project Description
+
+### Architecture & Design Choices
+
+The project contains three services:
+
+- **Nginx:** Terminates HTTPS connections on port `443` in the container and publishes them on host port `443`.
+- **WordPress:** Downloads and installs WordPress with WP-CLI, then runs PHP-FPM on port `9000`.
+- **MariaDB:** Creates the WordPress database and user, then stores the application data.
+
+Each service has its own custom Dockerfile and startup configuration. Docker Compose manages the service dependencies, private network, secrets, and persistent bind mounts.
+
+Key design choices include:
+
+- **TLS configuration:** Nginx accepts TLSv1.2 and TLSv1.3 traffic and uses a self-signed certificate generated with OpenSSL.
+- **Process isolation:** Each container runs its main service in the foreground so Docker can supervise it as PID 1.
+- **Data persistence:** WordPress files and MariaDB data are stored in `/home/mlabrirh/data/` on the host.
+- **Secrets:** Database and WordPress passwords are mounted from the `secrets/` directory at runtime instead of being stored in environment variables.
+
+### Technical Comparisons
+
+#### Virtual Machines vs Docker
+
+- **Virtual machines:** Emulate complete computer systems and run a separate guest operating system, which requires more memory and startup time.
+- **Docker:** Uses the host Linux kernel while isolating processes, filesystems, and networks with namespaces and cgroups.
+
+#### Secrets vs Environment Variables
+
+- **Docker secrets:** Mount sensitive values as files, such as `/run/secrets/db_password`, so applications can read them without placing passwords in the normal environment.
+- **Environment variables:** Are convenient for non-sensitive configuration, but can be exposed through process inspection, logs, or diagnostic output.
+
+#### Docker Network vs Host Network
+
+- **Docker bridge network:** Provides private container-to-container communication and Docker DNS resolution. MariaDB is not exposed directly to the host.
+- **Host network:** Removes the container network boundary and makes services bind directly to the host network interfaces.
+
+#### Docker Volumes vs Bind Mounts
+
+- **Docker volumes:** Are managed by Docker and stored in Docker's volume area.
+- **Bind mounts:** Map explicit host directories into containers. This project uses bind mounts so the data is easy to inspect and back up on the host.
+
+## Instructions
+
+Install Docker Engine, the Docker Compose plugin, and `make` before starting the project.
+
+Copy the example environment file and adjust it if necessary:
+
+```sh
+cp srcs/.env.example srcs/.env
 ```
-      Host Browser (https://mlabrirh.42.fr:443)
-                      │
-                      ▼
-               ┌───────────────┐
-               │  nginx:443    │ (TLS termination)
-               └───────┬───────┘
-                       │ FastCGI (port 9000)
-                       ▼
-               ┌───────────────┐
-               │ wordpress:9000│
-               └───────┬───────┘
-                       │ MariaDB TCP (port 3306)
-                       ▼
-               ┌───────────────┐
-               │ mariadb:3306  │
-               └───────────────┘
+
+The default domain is `mlabrirh.42.fr`. Add it to `/etc/hosts` when local DNS is not available:
+
+```text
+127.0.0.1 mlabrirh.42.fr
 ```
 
-## Setup Instructions
+Make sure these secret files exist and contain the required passwords:
 
-1. Add domain routing to `/etc/hosts`:
-   ```bash
-   127.0.0.1 mlabrirh.42.fr
-   ```
+- `secrets/db_password`
+- `secrets/wp_admin_password`
+- `secrets/wp_regular_password`
 
-2. Create host storage directories:
-   ```bash
-   mkdir -p /home/mlabrirh/data/mariadb /home/mlabrirh/data/wordpress
-   ```
+### Makefile Execution Rules
 
-3. Launch the infrastructure:
-   ```bash
-   make
-   ```
+- **`make`** or **`make all`** creates the host data directories, builds the images, and starts the containers in detached mode.
+- **`make status`** or **`make ps`** displays the container status.
+- **`make logs`** displays service logs.
+- **`make stop`** stops the containers without removing them.
+- **`make start`** starts stopped containers.
+- **`make down`** stops and removes the containers while preserving host data.
+- **`make clean`** removes containers, networks, and Compose volume metadata.
+- **`make fclean`** removes containers, images, Docker resources, and the persisted WordPress and MariaDB data.
+- **`make re`** runs `fclean` and then performs a complete rebuild and startup.
 
-## Makefile Commands
+After `make`, open:
 
-* `make` / `make all` - Builds images and launches containers in detached mode.
-* `make down` - Stops and removes containers and network.
-* `make clean` - Stops containers and removes Docker volumes.
-* `make fclean` - Complete teardown: removes containers, networks, images, and clears host data directories.
-* `make re` - Rebuilds the entire infrastructure from scratch (`fclean` + `all`).
-* `make logs` - Shows unified container output logs.
-* `make ps` - Displays the status and health of all containers.
+```text
+https://mlabrirh.42.fr:8443/
+```
 
-## Credentials & Users
+The browser will warn about the self-signed certificate on the first visit.
 
-* **WordPress URL**: `https://mlabrirh.42.fr`
-* **Admin Login URL**: `https://mlabrirh.42.fr/wp-admin`
-* **Admin Username**: `wp_master` (Non-admin naming compliant with 42 evaluation rules)
-* **Regular Username**: `mlabrirh_user`
-* **Secrets**: Managed securely via files in the `secrets/` directory (`db_password`, `wp_admin_password`, `wp_regular_password`).
+## Resources
+
+- [Docker Documentation](https://docs.docker.com/)
+- [Docker Compose Documentation](https://docs.docker.com/compose/)
+- [WordPress Documentation](https://wordpress.org/documentation/)
+
+For more detailed project information, see [dev_doc.md](dev_doc.md) and [user_doc.md](user_doc.md).
