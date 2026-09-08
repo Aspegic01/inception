@@ -86,7 +86,7 @@ Make sure these secret files exist and contain the required passwords:
 After `make`, open:
 
 ```text
-https://mlabrirh.42.fr:8443/
+https://mlabrirh.42.fr:443/
 ```
 
 The browser will warn about the self-signed certificate on the first visit.
@@ -97,4 +97,4 @@ The browser will warn about the self-signed certificate on the first visit.
 - [Docker Compose Documentation](https://docs.docker.com/compose/)
 - [WordPress Documentation](https://wordpress.org/documentation/)
 
-For more detailed project information, see [dev_doc.md](dev_doc.md) and [user_doc.md](user_doc.md).
+For more detailed project information, see [DEV_DOC.md](DEV_DOC.md) and [USER_DOC.md](USER_DOC.md).

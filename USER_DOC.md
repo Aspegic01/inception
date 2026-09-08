@@ -5,7 +5,7 @@
 After the stack is running, open:
 
 ```text
-https://<DOMAIN_NAME>:8443/
+https://<DOMAIN_NAME>:443/
 ```
 
 Replace `<DOMAIN_NAME>` with the value in `srcs/.env`. The first visit normally shows a certificate warning because the project uses a self-signed certificate. Continue only if you trust the local installation.
@@ -26,7 +26,7 @@ The initial accounts are configured in `srcs/.env`:
 Their passwords are stored in `secrets/wp_admin_password` and `secrets/wp_regular_password`. Use the administrator account at:
 
 ```text
-https://<DOMAIN_NAME>:8443/wp-admin/
+https://<DOMAIN_NAME>:443/wp-admin/
 ```
 
 The administrator username must not contain `admin` or `Admin`, as required by the bootstrap configuration.
@@ -57,7 +57,7 @@ Keep all files in `secrets/` private. To change a WordPress password after insta
 
 | Problem | Check |
 | --- | --- |
-| Site does not load | Confirm the domain points to the Docker host and that host port `8443` is reachable. |
+| Site does not load | Confirm the domain points to the Docker host and that host port `443` is reachable. |
 | Certificate warning | Expected for the default self-signed certificate. |
 | Login fails after editing a secret | Existing WordPress accounts keep their old passwords; reset the password in WordPress. |
 | Site appears empty after cleanup | `make fclean` removes persisted data; the next startup performs a new installation. |
