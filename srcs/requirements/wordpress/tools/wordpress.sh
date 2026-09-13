@@ -9,7 +9,7 @@ mkdir -p /var/www/wordpress /run/php
 cd /var/www/wordpress
 
 # Wait for MariaDB to accept connections
-until mariadb-admin ping -h mariadb -u "$DB_USER" -p"$DB_PASSWORD" --silent 2>/dev/null; do
+until mariadb-admin ping -h mariadb -P 3306 -u "$DB_USER" -p"$DB_PASSWORD" --silent 2>/dev/null; do
     sleep 2
 done
 

@@ -1,5 +1,15 @@
 # User Guide
 
+## Services
+
+The stack provides a WordPress website with:
+
+- **Nginx**, which serves the site over HTTPS and forwards PHP requests.
+- **WordPress with PHP-FPM**, which runs the application.
+- **MariaDB**, which stores WordPress content and accounts.
+
+MariaDB and PHP-FPM are private to the Docker network. Only HTTPS is published to the host.
+
 ## Open the site
 
 After the stack is running, open:
@@ -45,13 +55,15 @@ make start    # Start a stopped site
 make down     # Remove containers while preserving bind-mounted data
 ```
 
+To start the project from a stopped or removed state, run `make` (or `make all`). To verify it, use `make status`, confirm that `mariadb`, `wordpress`, and `nginx` are running, then open the website in a browser. `make logs` shows startup and runtime errors. A successful browser connection may still display the expected self-signed certificate warning.
+
 Do not run `make clean`, `make fclean`, or `make re` unless you understand the data-loss impact. `make fclean` removes the persisted WordPress and MariaDB data from the host.
 
 ## Data and passwords
 
-WordPress files are stored in `/home/mlabrirh/data/wordpress`, and MariaDB files are stored in `/home/mlabrirh/data/mariadb` with the current Compose configuration. Back up both directories before destructive maintenance.
+WordPress files are stored in `/home/mlabrirh/data/wordpress`, and MariaDB files are stored in `/home/mlabrirh/data/mariadb` with the current Compose configuration. These host directories are bind-mounted through Docker Compose volumes, so the data survives container recreation. Back up both directories before destructive maintenance.
 
-Keep all files in `secrets/` private. To change a WordPress password after installation, use the WordPress dashboard or the normal WordPress password reset flow. Updating a secret file alone does not change an existing WordPress account.
+Keep all files in `secrets/` private. The files are `secrets/db_password`, `secrets/wp_admin_password`, and `secrets/wp_regular_password`. To change a WordPress password after installation, use the WordPress dashboard or the normal WordPress password reset flow. Updating a secret file alone does not change an existing WordPress account.
 
 ## Common problems
 

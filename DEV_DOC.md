@@ -8,7 +8,7 @@ The Compose project is defined in `srcs/docker-compose.yml` and creates three se
 | --- | --- | --- | --- |
 | `mariadb` | Database server | `mariadb:3306` | None |
 | `wordpress` | WP-CLI bootstrap and PHP-FPM | `wordpress:9000` | None |
-| `nginx` | HTTPS reverse proxy and static file server | `nginx:443`|
+| `nginx` | HTTPS reverse proxy and static file server | `nginx:443` inside the network, host `443` |
 
 Nginx mounts the same `wordpress_data` volume as the WordPress container. MariaDB uses `mariadb_data`. Both volumes are bind mounts, so data survives container recreation.
 
@@ -42,6 +42,7 @@ Passwords are read from Docker secrets mounted at `/run/secrets/`. Do not place 
 ## Development commands
 
 ```sh
+make                       # Build images and start in detached mode
 make build                 # Build images
 make up                    # Start in detached mode
 make status                # Equivalent to docker compose ps
@@ -49,6 +50,16 @@ make logs                  # Follow all collected logs after startup
 docker compose -f srcs/docker-compose.yml config
 docker compose -f srcs/docker-compose.yml exec wordpress wp user list --allow-root
 ```
+
+The `Makefile` expects Docker Engine, the Docker Compose plugin, GNU Make, and a Linux host with `sudo` available for the destructive cleanup fallback. Before building, verify that `srcs/.env` contains the domain, database, user, email, and data-path settings, and that these files contain passwords:
+
+```text
+secrets/db_password
+secrets/wp_admin_password
+secrets/wp_regular_password
+```
+
+The Compose file reads `srcs/.env` and mounts the secret files into the containers under `/run/secrets/`. Passwords must not be added to `.env`, Dockerfiles, or source code.
 
 To rebuild after changing an image or startup script:
 
@@ -64,7 +75,7 @@ To force a fresh WordPress installation, stop the stack and remove the persisted
 - `depends_on` controls start order but does not mean MariaDB or PHP-FPM is ready. The WordPress startup script handles the database readiness check.
 - The current Nginx configuration hard-codes `mlabrirh.42.fr` in `server_name` and in the generated certificate subject. Changing `DOMAIN_NAME` alone does not update Nginx.
 - The certificate is self-signed and generated during the Nginx image build with a one-year validity.
-- The Nginx configuration publishes HTTPS on host port `443`; use `https://<domain>:443/`.
+- The Nginx configuration listens on container port `443` and Compose publishes it as host port `443`; use `https://<domain>:443/`.
 - The database is bound to `0.0.0.0` inside the container but is not published to the host. It is reachable only through the Compose network.
 - The image build downloads WP-CLI from GitHub. Rebuilds can therefore retrieve a different artifact unless the download is pinned.
 - PHP-FPM, Nginx, and MariaDB run as foreground processes so Docker can supervise them.

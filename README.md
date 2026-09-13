@@ -1,4 +1,4 @@
-*This project has been created as part of the 42 curriculum by Mouad labrirhil.*
+*This project has been created as part of the 42 curriculum by mlabrirh.*
 
 # Inception
 
@@ -19,6 +19,8 @@ The project contains three services:
 - **MariaDB:** Creates the WordPress database and user, then stores the application data.
 
 Each service has its own custom Dockerfile and startup configuration. Docker Compose manages the service dependencies, private network, secrets, and persistent bind mounts.
+
+The repository includes the Compose definition, service Dockerfiles, Nginx and PHP-FPM configuration, MariaDB and WordPress initialization scripts, environment configuration, and Docker secret files needed to run the stack.
 
 Key design choices include:
 
@@ -53,10 +55,10 @@ Key design choices include:
 
 Install Docker Engine, the Docker Compose plugin, and `make` before starting the project.
 
-Copy the example environment file and adjust it if necessary:
+Review the committed environment configuration and adjust the non-secret values if necessary:
 
 ```sh
-cp srcs/.env.example srcs/.env
+${EDITOR:-vi} srcs/.env
 ```
 
 The default domain is `mlabrirh.42.fr`. Add it to `/etc/hosts` when local DNS is not available:
@@ -89,12 +91,21 @@ After `make`, open:
 https://mlabrirh.42.fr:443/
 ```
 
-The browser will warn about the self-signed certificate on the first visit.
+The browser will warn about the self-signed certificate on the first visit. Host port `443` is forwarded to Nginx port `443` in the container.
 
 ## Resources
 
 - [Docker Documentation](https://docs.docker.com/)
 - [Docker Compose Documentation](https://docs.docker.com/compose/)
+- [Docker storage documentation](https://docs.docker.com/engine/storage/)
+- [Docker secrets documentation](https://docs.docker.com/engine/swarm/secrets/)
+- [Nginx documentation](https://nginx.org/en/docs/)
+- [MariaDB documentation](https://mariadb.com/docs/)
 - [WordPress Documentation](https://wordpress.org/documentation/)
+- [WP-CLI handbook](https://make.wordpress.org/cli/handbook/)
+
+### Use of AI
+
+AI assistance was used to review the documentation requirements, improve the English wording, cross-check the README against the Docker Compose, Makefile, Dockerfiles, and startup scripts, and identify documentation inconsistencies such as the published HTTPS port. The project architecture, configuration, shell scripts, and Docker setup were reviewed against the repository files; AI was not used to replace the required understanding of the implementation.
 
 For more detailed project information, see [DEV_DOC.md](DEV_DOC.md) and [USER_DOC.md](USER_DOC.md).
